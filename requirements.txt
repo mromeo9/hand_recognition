@@ -2,4 +2,6 @@ opencv-python
 numpy
 pandas
 scikit-learn
+mediapipe
+torch
 -e .
