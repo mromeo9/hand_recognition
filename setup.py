@@ -1,20 +1,22 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+from typing import List
 
-HYPE_DOT = '-e .'
-def get_requirements(file_str):
+HYPE_E_DOT = '-e .'
+def get_requirements(file_path:str)->List:
 
-    with open(file_str) as obj:
+    requirements = []
+    with open(file_path) as obj:
         requirements = obj.readlines()
-        requirements = [req.replace('\n','')for req in requirements]
-
-        if HYPE_DOT in requirements:
-            requirements.remove(HYPE_DOT)
-
+        requirements = [req.replace("\n","")for req in requirements]
+        
+        if HYPE_E_DOT  in requirements:
+            requirements.remove(HYPE_E_DOT )
 
 setup(
-    name='Hand Recongnition',
+    name='Hand_recognition',
+    version='0.1',
     author='Michael Romeo',
     author_email='romeo-michael@outlook.com',
     packages=find_packages(),
-    requires=get_requirements(file_str = 'requirements.txt')
+    install_requires=get_requirements('requirements.txt')
 )
