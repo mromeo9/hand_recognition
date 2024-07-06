@@ -11,15 +11,15 @@ class Camera():
     Camera class to create an object to acces the camera
     """
 
-    def __call__(self, camera_path = None):
+    def __call__(self, camera_path: int = None):
         """
         On call the camera object will access the camera
         """
         try:
             logging.info("Trying to access the camera")
 
-            if camera_path is None:
-                logging.info("Camera path not given")
+            if isinstance(camera_path,int):
+                logging.info("Camera path must be given as an integer")
 
             else:
                 cam = cv.VideoCapture(camera_path)
