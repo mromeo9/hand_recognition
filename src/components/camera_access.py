@@ -39,6 +39,9 @@ class Camera():
                         
                         #Access the frame 
                         ret, frame = cam.read()
+                        
+                        if not ret:
+                            break
 
                         # Recognise the image 
                         image = cv.flip(frame,1) # Flipping so it is mirrored
