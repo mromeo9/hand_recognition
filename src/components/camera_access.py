@@ -2,16 +2,27 @@
 import sys
 import cv2 as cv
 import numpy as np
+from dataclasses import dataclass
 
 # Importing exceptions and logging 
 from src.components.find_landmarks import GestureRecog
 from src.exceptions import CustomException
 from src.logger import logging
+from src.components.data_collection import DataCollect
+
+class CameraMode:
+    normal = 0
+    data_collect = 1
 
 class Camera():
     """
     Camera class to create an object to acces the camera
     """
+    def __init__(self, label = None, mode = 0,):
+
+        self.camera_config = CameraMode()
+        self.mode = mode
+        self.label = label
 
     def __call__(self, camera_path: int = None):
         """
@@ -33,6 +44,8 @@ class Camera():
                     logging.info("Camera accessed successfully")
                     
                     recognizer = GestureRecog()
+                    data_collector = DataCollect()
+
                     logging.info('Recognisor initialised')
 
                     while cam.isOpened():
@@ -56,6 +69,14 @@ class Camera():
                             #Set the landmarks into an array
                             landmark_array, z_position = self.make_landmark_array(image, hand_landmark)
 
+                            # If data collection is active
+                            if self.mode == self.camera_config.data_collect:
+                                if self.label is None:
+                                    pass
+
+                                else:
+                                    data_collector.collect(image, self.label, landmark_array)
+                                
                             #Draw a bounding box around he hand
                             self.draw_bounding_box(d_image, landmark_array)
 
@@ -64,7 +85,7 @@ class Camera():
 
                             #Add text for the image
                             self.add_text(d_image, gestures[0], landmark_array, handedness[0])
-                        
+                            
                         cv.imshow('Camera', d_image)
                         if cv.waitKey(1) & 0xFF == ord('q'):
                             logging.info("Closing camera")
