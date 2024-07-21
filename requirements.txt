@@ -5,4 +5,7 @@ scikit-learn
 mediapipe
 torch
 torchvision
+tensorflow
+pyyaml
+h5py
 -e .
