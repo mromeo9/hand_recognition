@@ -9,6 +9,7 @@ from src.components.find_landmarks import GestureRecog
 from src.exceptions import CustomException
 from src.logger import logging
 from src.components.data_collection import DataCollect
+from src.components.models.sign_language_classifier.sign_language import SignLanguageClassifier
 
 class CameraMode:
     normal = 0
@@ -45,6 +46,7 @@ class Camera():
                     
                     recognizer = GestureRecog()
                     data_collector = DataCollect()
+                    sign_language_classifier = SignLanguageClassifier()
 
                     logging.info('Recognisor initialised')
 
@@ -55,7 +57,7 @@ class Camera():
                         
                         if not ret:
                             break
-
+                        
                         # Recognise the image 
                         image = cv.flip(frame,1) # Flipping so it is mirrored
                         d_image = np.copy(image) # Image to draw on
@@ -76,6 +78,10 @@ class Camera():
 
                                 else:
                                     data_collector.collect(image, self.label, landmark_array)
+                            
+                            #Normalising and predicting sign
+                            normalised = self.normalised_data(landmark_array,image)
+                            sign_pred = sign_language_classifier(normalised)
                                 
                             #Draw a bounding box around he hand
                             self.draw_bounding_box(d_image, landmark_array)
@@ -84,7 +90,7 @@ class Camera():
                             self.draw_fingers(d_image, landmark_array, z_position)
 
                             #Add text for the image
-                            self.add_text(d_image, gestures[0], landmark_array, handedness[0])
+                            self.add_text(d_image, gestures[0],sign_pred, landmark_array, handedness[0], self.mode)
                             
                         cv.imshow('Camera', d_image)
                         if cv.waitKey(1) & 0xFF == ord('q'):
@@ -96,6 +102,18 @@ class Camera():
 
         except CustomException as e:
             raise CustomException(e,sys)
+        
+    def normalised_data(self, input, image):
+
+        image_h, image_w, _ = image.shape
+
+        # Normalise the data and make it ready for model 
+        base_point = input[0]
+        normalised_data = (input - base_point) / [image_w, image_h]
+        normalised_data = normalised_data.flatten()
+        normalised_data = np.reshape(normalised_data,(1,len(normalised_data)))
+
+        return normalised_data
     
     def make_landmark_array(self,image, landmarks):
         """
@@ -207,7 +225,7 @@ class Camera():
         cv.line(image, landmark_array[18], landmark_array[19], (0,0,0),1)
         cv.line(image, landmark_array[19], landmark_array[20], (0,0,0),1)
 
-    def add_text(self, image, gesture, landmark_array, handedness):
+    def add_text(self, image, gesture, sign_pred, landmark_array, handedness, mode):
         """
         This method adds the text from the predicted gestures and hand side
 
@@ -231,7 +249,10 @@ class Camera():
         elif handedness.category_name == 'Left':
             hand = 'Right'
         
-        text = hand + ' | ' + category # Text to be outputted 
+        if mode == 2:
+            text = hand + ' | ' + sign_pred # Text to be outputted 
+
+        else: text = hand + ' | ' + category # Text to be outputted 
 
         # Positon of text box   
         x, y, _, _ = cv.boundingRect(landmark_array)
