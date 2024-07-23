@@ -10,7 +10,7 @@ from src.exceptions import CustomException
 from src.logger import logging
 from src.components.data_collection import DataCollect
 
-
+@dataclass
 class CameraMode:
     normal = 0
     data_collect = 1
@@ -83,7 +83,7 @@ class Camera():
                         self.draw_fingers(d_image, landmark_array, z_position)
 
                         #Add text for the image
-                        self.add_text(d_image, gestures[0],sign_pred, landmark_array, handedness[0], self.mode)
+                        self.add_text(d_image, gestures[0], sign_pred, landmark_array, handedness[0], self.mode)
                     
                     return ret, d_image
                 
