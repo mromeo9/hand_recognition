@@ -25,7 +25,7 @@ class Camera():
         self.mode = mode
         self.label = label
 
-    def __call__(self, camera_path: int = None):
+    def __call__(self, camera_path: int = 0):
         """
         On call the camera object will access the camera
         """
