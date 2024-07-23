@@ -5,11 +5,11 @@ import numpy as np
 from dataclasses import dataclass
 
 # Importing exceptions and logging 
-from src.components.find_landmarks import GestureRecog
+
 from src.exceptions import CustomException
 from src.logger import logging
 from src.components.data_collection import DataCollect
-from src.components.models.sign_language_classifier.sign_language import SignLanguageClassifier
+
 
 class CameraMode:
     normal = 0
@@ -19,86 +19,76 @@ class Camera():
     """
     Camera class to create an object to acces the camera
     """
-    def __init__(self, label = None, mode = 0,):
+    def __init__(self, camera_path = 0, label = None, mode = 0,):
 
         self.camera_config = CameraMode()
         self.mode = mode
         self.label = label
 
-    def __call__(self, camera_path: int = 0):
+        self.cam = cv.VideoCapture(camera_path)
+
+    def get_frame(self, sign_language_classifier, recognizer):
         """
         On call the camera object will access the camera
         """
         try:
             logging.info("Trying to access the camera")
 
-            if not isinstance(camera_path,int):
-                logging.info("Camera path must be given as an integer")
+            if not self.cam.isOpened():
+                logging.info("Could not access camera")
 
             else:
-                cam = cv.VideoCapture(camera_path)
+                logging.info("Camera accessed successfully")
+                
+                # For when collecting data
+                data_collector = DataCollect()
 
-                if not cam.isOpened():
-                    logging.info("Could not access camera")
+                logging.info('Recognisor initialised')
 
-                else:
-                    logging.info("Camera accessed successfully")
-                    
-                    recognizer = GestureRecog()
-                    data_collector = DataCollect()
-                    sign_language_classifier = SignLanguageClassifier()
+                #Access the frame 
+                ret, frame = self.cam.read()
+                
+                
+                if ret:
+                
+                    # Recognise the image 
+                    image = cv.flip(frame,1) # Flipping so it is mirrored
+                    d_image = np.copy(image) # Image to draw on
+                    image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
 
-                    logging.info('Recognisor initialised')
+                    m_landmarks, m_gestures, m_handed = recognizer.hand_predict(image) 
 
-                    while cam.isOpened():
+                    for hand_landmark, gestures, handedness in zip(m_landmarks,
+                                                                    m_gestures, 
+                                                                    m_handed):
+                        #Set the landmarks into an array
+                        landmark_array, z_position = self.make_landmark_array(image, hand_landmark)
+
+                        # If data collection is active
+                        if self.mode == self.camera_config.data_collect:
+                            if self.label is None:
+                                pass
+
+                            else:
+                                data_collector.collect(image, self.label, landmark_array)
                         
-                        #Access the frame 
-                        ret, frame = cam.read()
-                        
-                        if not ret:
-                            break
-                        
-                        # Recognise the image 
-                        image = cv.flip(frame,1) # Flipping so it is mirrored
-                        d_image = np.copy(image) # Image to draw on
-                        image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-
-                        m_landmarks, m_gestures, m_handed = recognizer.hand_predict(image) 
-
-                        for hand_landmark, gestures, handedness in zip(m_landmarks,
-                                                                       m_gestures, 
-                                                                       m_handed):
-                            #Set the landmarks into an array
-                            landmark_array, z_position = self.make_landmark_array(image, hand_landmark)
-
-                            # If data collection is active
-                            if self.mode == self.camera_config.data_collect:
-                                if self.label is None:
-                                    pass
-
-                                else:
-                                    data_collector.collect(image, self.label, landmark_array)
+                        #Normalising and predicting sign
+                        normalised = self.normalised_data(landmark_array,image)
+                        sign_pred = sign_language_classifier(normalised)
                             
-                            #Normalising and predicting sign
-                            normalised = self.normalised_data(landmark_array,image)
-                            sign_pred = sign_language_classifier(normalised)
-                                
-                            #Draw a bounding box around he hand
-                            self.draw_bounding_box(d_image, landmark_array)
+                        #Draw a bounding box around he hand
+                        self.draw_bounding_box(d_image, landmark_array)
 
-                            #Add the landmarks for the image
-                            self.draw_fingers(d_image, landmark_array, z_position)
+                        #Add the landmarks for the image
+                        self.draw_fingers(d_image, landmark_array, z_position)
 
-                            #Add text for the image
-                            self.add_text(d_image, gestures[0],sign_pred, landmark_array, handedness[0], self.mode)
-                            
-                        cv.imshow('Camera', d_image)
-                        if cv.waitKey(1) & 0xFF == ord('q'):
-                            logging.info("Closing camera")
-                            break
+                        #Add text for the image
+                        self.add_text(d_image, gestures[0],sign_pred, landmark_array, handedness[0], self.mode)
                     
-                    cam.release()
-                    cv.destroyAllWindows()
+                    return ret, d_image
+                
+                else: return ret, frame
+                
 
         except CustomException as e:
             raise CustomException(e,sys)

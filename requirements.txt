@@ -8,4 +8,5 @@ torchvision
 tensorflow
 pyyaml
 h5py
+flask
 #-e .
